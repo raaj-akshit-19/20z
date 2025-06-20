@@ -2,9 +2,9 @@
 import streamlit as st
 import requests
 
-st.set_page_config(page_title="AI Gym & Diet Planner", page_icon="🏋️")
+st.set_page_config(page_title="AI Gym Genie", page_icon="🧞")
 
-st.title("🏋️ AI Gym & Diet Planner")
+st.title("🧞 Gym Genie")
 st.markdown("Get your personalized workout and nutrition plan based on your goal.")
 
 # Input fields
