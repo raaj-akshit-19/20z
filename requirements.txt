@@ -1,3 +1,4 @@
 flask
 nbformat
 nbconvert
+pandas
