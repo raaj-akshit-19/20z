@@ -7,8 +7,7 @@ from datetime import datetime
 app = Flask(__name__)
 
 # Load workout dataset
-df = pd.read_csv("workouts.csv")
-
+df = pd.read_csv("Workout_Dataset.csv")
 @app.route('/')
 def home():
     return "AI Gym Planner API is running"
