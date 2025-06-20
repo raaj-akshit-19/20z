@@ -1,4 +1,3 @@
 flask
-nbformat
-nbconvert
 pandas
+fpdf
