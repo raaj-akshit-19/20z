@@ -6,23 +6,33 @@ from datetime import datetime
 
 app = Flask(__name__)
 
+# Set the folder to serve PDFs
+app.static_folder = 'plans'
+
 # Load workout dataset
-df = pd.read_csv("Workout_Dataset.csv")
+try:
+    df = pd.read_csv("Workout_Dataset.csv")
+except Exception as e:
+    print("❌ Error loading Workout_Dataset.csv:", e)
+    df = pd.DataFrame()
+
 @app.route('/')
 def home():
-    return "AI Gym Planner API is running"
+    return "✅ AI Gym Planner API is running."
 
 @app.route('/generate-plan', methods=['POST'])
 def generate_plan():
     try:
         data = request.get_json()
+
+        # Input validation
         username = data.get('username')
         current_weight = float(data.get('current_weight'))
         target_weight = float(data.get('target_weight'))
         days = int(data.get('days'))
 
         if not all([username, current_weight, target_weight, days]):
-            return jsonify({"error": "Missing input values"}), 400
+            return jsonify({"error": "Missing required inputs"}), 400
 
         # Determine goal
         if current_weight > target_weight:
@@ -32,58 +42,63 @@ def generate_plan():
         else:
             goal = "maintain"
 
-        # Filter workouts for even distribution
+        # Filter workouts based on goal
         workouts = df[df['Goal'].str.lower() == goal].sample(n=days, replace=True).reset_index(drop=True)
 
         plan = []
         for i in range(days):
             workout = workouts.iloc[i]
+            workout_name = workout["Workout"]
+            sets_or_time = f"{workout['Sets']} minutes" if workout_name.lower() == "treadmill jog" else workout["Sets"]
+
             item = {
                 "Day": f"Day {i + 1}",
-                "Workout": workout["Workout"],
+                "Workout": workout_name,
                 "Muscle": workout["Muscle"],
-                "Sets": workout["Sets"] if workout["Workout"].lower() != "treadmill jog" else f"{workout['Sets']} minutes",
+                "Sets": sets_or_time,
                 "Steps": 6000 if goal == "maintain" else (7000 if goal == "reduce" else 5000),
                 "Calories": 2000 if goal == "maintain" else (1700 if goal == "reduce" else 2300)
             }
             plan.append(item)
 
-        # Create PDF
+        # Generate PDF
+        os.makedirs("plans", exist_ok=True)
+        filename = f"{username.lower().replace(' ', '_')}_plan.pdf"
+        filepath = os.path.join("plans", filename)
+
         pdf = FPDF()
         pdf.add_page()
         pdf.set_font("Arial", size=12)
-        pdf.cell(200, 10, txt=f"Gym Plan for {username}", ln=True, align='C')
-        pdf.ln(5)
+        pdf.cell(200, 10, txt=f"🏋️ Gym & Lifestyle Plan for {username}", ln=True, align='C')
+        pdf.ln(10)
 
         for item in plan:
             pdf.cell(200, 10, txt=f"{item['Day']}:", ln=True)
             pdf.cell(200, 10, txt=f"  Workout: {item['Workout']}", ln=True)
             pdf.cell(200, 10, txt=f"  Muscle Targeted: {item['Muscle']}", ln=True)
             pdf.cell(200, 10, txt=f"  Sets/Time: {item['Sets']}", ln=True)
-            pdf.cell(200, 10, txt=f"  Steps: {item['Steps']} steps", ln=True)
+            pdf.cell(200, 10, txt=f"  Step Goal: {item['Steps']} steps", ln=True)
             pdf.cell(200, 10, txt=f"  Calorie Intake: {item['Calories']} kcal", ln=True)
             pdf.ln(5)
 
-        filename = f"{username.lower().replace(' ', '_')}_plan.pdf"
-        filepath = os.path.join("plans", filename)
-        os.makedirs("plans", exist_ok=True)
         pdf.output(filepath)
 
-        # Generate public link (adjust if you're using S3, etc.)
+        # Generate link to PDF
         pdf_link = f"https://gymplanner-api.onrender.com/plans/{filename}"
         return jsonify({"pdf_link": pdf_link})
 
     except Exception as e:
-        print("Error:", e)
+        print("❌ Error in /generate-plan:", e)
         return jsonify({"error": str(e)}), 500
 
-# Serve PDF statically
+# Serve PDF files from the /plans endpoint
 @app.route('/plans/<filename>', methods=['GET'])
 def serve_pdf(filename):
-    return app.send_static_file(f"plans/{filename}")
-
-# To serve plans from 'plans' folder as static
-app.static_folder = 'plans'
+    try:
+        return app.send_static_file(f"plans/{filename}")
+    except Exception as e:
+        return jsonify({"error": f"Unable to fetch PDF: {e}"}), 404
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    port = int(os.environ.get("PORT", 10000))
+    app.run(host='0.0.0.0', port=port)
