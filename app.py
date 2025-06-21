@@ -36,22 +36,30 @@ def generate_plan():
         if df.empty:
             return jsonify({"error": "Workout dataset not loaded."}), 500
 
-        goal = "reduce" if current_weight > target_weight else "increase" if current_weight < target_weight else "maintain"
-        workouts = df[df['Goal'].str.lower() == goal]
+        # Decide goal based on weight
+        if current_weight > target_weight:
+            goal = "reduce"
+            filtered_df = df[df["Type"].str.lower() == "cardio"]
+        elif current_weight < target_weight:
+            goal = "increase"
+            filtered_df = df[df["Type"].str.lower() == "strength"]
+        else:
+            goal = "maintain"
+            filtered_df = df  # use all types
 
-        if workouts.empty:
+        if filtered_df.empty:
             return jsonify({"error": f"No workouts available for goal: {goal}"}), 500
 
-        sampled = workouts.sample(n=days, replace=True).reset_index(drop=True)
+        sampled = filtered_df.sample(n=days, replace=True).reset_index(drop=True)
 
         plan = []
         for i in range(days):
             w = sampled.iloc[i]
             plan.append({
                 "Day": f"Day {i+1}",
-                "Workout": w['Workout'],
+                "Workout": w['Workout Name'],
                 "Muscle": w['Muscle'],
-                "Sets/Time": w['Sets'],
+                "Sets/Time": w['Reps/Time'],
                 "Steps": 6000 if goal == "maintain" else (7000 if goal == "reduce" else 5000),
                 "Calories": 2000 if goal == "maintain" else (1700 if goal == "reduce" else 2300)
             })
