@@ -1,0 +1,102 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>AI Gym & Lifestyle Planner</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: #f4f6f8;
+            padding: 20px;
+            max-width: 900px;
+            margin: auto;
+        }
+        h2 {
+            text-align: center;
+            color: #2c3e50;
+        }
+        form {
+            margin-bottom: 30px;
+            padding: 20px;
+            background: #ffffff;
+            border-radius: 10px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        input {
+            padding: 10px;
+            margin: 10px 0;
+            width: 100%;
+            box-sizing: border-box;
+        }
+        button {
+            padding: 10px 20px;
+            background-color: #3498db;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #2980b9;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 30px;
+        }
+        th, td {
+            padding: 12px;
+            text-align: center;
+            border: 1px solid #ccc;
+        }
+        th {
+            background-color: #3498db;
+            color: white;
+        }
+    </style>
+</head>
+<body>
+    <h2>AI Gym & Lifestyle Planner</h2>
+    <form id="planner-form">
+        <input type="text" id="username" placeholder="Enter your name" required><br>
+        <input type="number" id="current_weight" placeholder="Current Weight (kg)" required><br>
+        <input type="number" id="target_weight" placeholder="Target Weight (kg)" required><br>
+        <input type="number" id="days" placeholder="Number of Days" required><br>
+        <button type="submit">Generate Plan</button>
+    </form>
+
+    <div id="output"></div>
+
+    <script>
+        document.getElementById('planner-form').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            const username = document.getElementById('username').value;
+            const current_weight = document.getElementById('current_weight').value;
+            const target_weight = document.getElementById('target_weight').value;
+            const days = document.getElementById('days').value;
+
+            const response = await fetch('/generate-plan', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ username, current_weight, target_weight, days })
+            });
+
+            const data = await response.json();
+            const output = document.getElementById('output');
+            output.innerHTML = "";
+
+            if (data.error) {
+                output.innerHTML = `<p style="color:red;">${data.error}</p>`;
+            } else {
+                let table = `<h3>Plan for ${data.username}</h3><table><tr><th>Day</th><th>Workout</th><th>Muscle</th><th>Sets/Time</th><th>Steps</th><th>Calories</th></tr>`;
+                data.plan.forEach(item => {
+                    table += `<tr><td>${item.Day}</td><td>${item.Workout}</td><td>${item.Muscle}</td><td>${item["Sets/Time"]}</td><td>${item.Steps}</td><td>${item.Calories}</td></tr>`;
+                });
+                table += "</table>";
+                output.innerHTML = table;
+            }
+        });
+    </script>
+</body>
+</html>
