@@ -15,6 +15,31 @@ except Exception as e:
     print("❌ Failed to load dataset:", e)
     df = pd.DataFrame()
 
+class PDF(FPDF):
+    def header(self):
+        self.set_font("Arial", "B", 14)
+        self.cell(0, 10, "🏋️ Gym & Lifestyle Plan", ln=True, align="C")
+        self.ln(5)
+
+    def table_header(self):
+        self.set_font("Arial", "B", 12)
+        self.set_fill_color(200, 220, 255)
+        self.cell(15, 10, "Day", 1, 0, 'C', 1)
+        self.cell(45, 10, "Workout", 1, 0, 'C', 1)
+        self.cell(30, 10, "Muscle", 1, 0, 'C', 1)
+        self.cell(40, 10, "Sets/Time", 1, 0, 'C', 1)
+        self.cell(30, 10, "Steps", 1, 0, 'C', 1)
+        self.cell(30, 10, "Calories", 1, 1, 'C', 1)
+
+    def table_row(self, day, workout, muscle, reps_time, steps, cal):
+        self.set_font("Arial", "", 11)
+        self.cell(15, 10, str(day), 1, 0, 'C')
+        self.cell(45, 10, workout, 1, 0, 'C')
+        self.cell(30, 10, muscle, 1, 0, 'C')
+        self.cell(40, 10, reps_time, 1, 0, 'C')
+        self.cell(30, 10, str(steps), 1, 0, 'C')
+        self.cell(30, 10, str(cal), 1, 1, 'C')
+
 @app.route('/')
 def home():
     return "✅ AI Gym Planner API is running."
@@ -24,7 +49,6 @@ def generate_plan():
     try:
         data = request.get_json(force=True)
 
-        # Input validation
         username = data.get('username')
         current_weight = data.get('current_weight')
         target_weight = data.get('target_weight')
@@ -51,44 +75,35 @@ def generate_plan():
         else:
             goal = "maintain"
 
-        # Sample workouts for the number of days
         sampled = df.sample(n=days, replace=True).reset_index(drop=True)
         plan = []
 
         for i in range(days):
             w = sampled.iloc[i]
-            workout_name = w['Workout Name']
-            muscle = w['Muscle']
-            reps_time = w['Reps/Time']
-
             plan.append({
-                "Day": f"Day {i+1}",
-                "Workout": workout_name,
-                "Muscle": muscle,
-                "Sets": reps_time,
+                "Day": f"{i + 1}",
+                "Workout": w["Workout Name"],
+                "Muscle": w["Muscle"],
+                "Sets": w["Reps/Time"],
                 "Steps": 6000 if goal == "maintain" else (7000 if goal == "reduce" else 5000),
                 "Calories": 2000 if goal == "maintain" else (1700 if goal == "reduce" else 2300)
             })
 
-        # Generate PDF
+        # Create PDF with table
         os.makedirs("plans", exist_ok=True)
         filename = f"{username.lower().replace(' ', '_')}_plan.pdf"
         filepath = os.path.join("plans", filename)
 
-        pdf = FPDF()
+        pdf = PDF()
         pdf.add_page()
         pdf.set_font("Arial", size=12)
-        pdf.cell(200, 10, txt=f"🏋️ Gym Plan for {username}", ln=True, align='C')
-        pdf.ln(10)
+        pdf.cell(0, 10, f"Name: {username}", ln=True)
+        pdf.cell(0, 10, f"Goal: {goal.title()} weight ({current_weight}kg → {target_weight}kg)", ln=True)
+        pdf.ln(5)
+        pdf.table_header()
 
         for item in plan:
-            pdf.cell(200, 10, txt=f"{item['Day']}:", ln=True)
-            pdf.cell(200, 10, txt=f"  Workout: {item['Workout']}", ln=True)
-            pdf.cell(200, 10, txt=f"  Muscle: {item['Muscle']}", ln=True)
-            pdf.cell(200, 10, txt=f"  Sets/Time: {item['Sets']}", ln=True)
-            pdf.cell(200, 10, txt=f"  Steps: {item['Steps']}", ln=True)
-            pdf.cell(200, 10, txt=f"  Calories: {item['Calories']} kcal", ln=True)
-            pdf.ln(5)
+            pdf.table_row(item["Day"], item["Workout"], item["Muscle"], item["Sets"], item["Steps"], item["Calories"])
 
         pdf.output(filepath)
 
