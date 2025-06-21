@@ -51,21 +51,21 @@ def generate_plan():
         else:
             goal = "maintain"
 
-        workouts = df[df['Goal'].str.lower() == goal]
-        if workouts.empty:
-            return jsonify({"error": f"No workouts available for goal: {goal}"}), 500
-
-        sampled = workouts.sample(n=days, replace=True).reset_index(drop=True)
+        # Sample workouts for the number of days
+        sampled = df.sample(n=days, replace=True).reset_index(drop=True)
         plan = []
 
         for i in range(days):
             w = sampled.iloc[i]
-            sets_or_time = f"{w['Sets']} minutes" if w['Workout'].lower() == "treadmill jog" else w['Sets']
+            workout_name = w['Workout Name']
+            muscle = w['Muscle']
+            reps_time = w['Reps/Time']
+
             plan.append({
                 "Day": f"Day {i+1}",
-                "Workout": w['Workout'],
-                "Muscle": w['Muscle'],
-                "Sets": sets_or_time,
+                "Workout": workout_name,
+                "Muscle": muscle,
+                "Sets": reps_time,
                 "Steps": 6000 if goal == "maintain" else (7000 if goal == "reduce" else 5000),
                 "Calories": 2000 if goal == "maintain" else (1700 if goal == "reduce" else 2300)
             })
