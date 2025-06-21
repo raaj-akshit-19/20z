@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -54,15 +53,21 @@
             background-color: #3498db;
             color: white;
         }
+        .summary {
+            background: #ecf0f1;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+        }
     </style>
 </head>
 <body>
     <h2>AI Gym & Lifestyle Planner</h2>
     <form id="planner-form">
         <input type="text" id="username" placeholder="Enter your name" required><br>
-        <input type="number" id="current_weight" placeholder="Current Weight (kg)" required><br>
-        <input type="number" id="target_weight" placeholder="Target Weight (kg)" required><br>
-        <input type="number" id="days" placeholder="Number of Days" required><br>
+        <input type="number" id="current_weight" placeholder="Current Weight (kg)" required min="30" max="200"><br>
+        <input type="number" id="target_weight" placeholder="Target Weight (kg)" required min="30" max="200"><br>
+        <input type="number" id="days" placeholder="Number of Days (1-14)" required min="1" max="14"><br>
         <button type="submit">Generate Plan</button>
     </form>
 
@@ -76,25 +81,43 @@
             const target_weight = document.getElementById('target_weight').value;
             const days = document.getElementById('days').value;
 
-            const response = await fetch('/generate-plan', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ username, current_weight, target_weight, days })
-            });
-
-            const data = await response.json();
             const output = document.getElementById('output');
-            output.innerHTML = "";
+            output.innerHTML = "<p>Generating your personalized plan...</p>";
 
-            if (data.error) {
-                output.innerHTML = `<p style="color:red;">${data.error}</p>`;
-            } else {
-                let table = `<h3>Plan for ${data.username}</h3><table><tr><th>Day</th><th>Workout</th><th>Muscle</th><th>Sets/Time</th><th>Steps</th><th>Calories</th></tr>`;
-                data.plan.forEach(item => {
-                    table += `<tr><td>${item.Day}</td><td>${item.Workout}</td><td>${item.Muscle}</td><td>${item["Sets/Time"]}</td><td>${item.Steps}</td><td>${item.Calories}</td></tr>`;
+            try {
+                const response = await fetch('/generate-plan', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, current_weight, target_weight, days })
                 });
-                table += "</table>";
-                output.innerHTML = table;
+
+                const data = await response.json();
+                output.innerHTML = "";
+
+                if (data.error) {
+                    output.innerHTML = `<p style="color:red;">${data.error}</p>`;
+                } else {
+                    // Add summary
+                    let summary = `
+                        <div class="summary">
+                            <h3>Plan for ${data.username}</h3>
+                            <p><strong>Goal:</strong> ${data.goal} weight (from ${data.current_weight}kg to ${data.target_weight}kg)</p>
+                            <p><strong>Duration:</strong> ${data.plan.length} days</p>
+                        </div>
+                    `;
+                    
+                    // Add table
+                    let table = `<table><tr><th>Day</th><th>Workout</th><th>Muscle</th><th>Sets/Time</th><th>Steps</th><th>Calories</th></tr>`;
+                    data.plan.forEach(item => {
+                        table += `<tr><td>${item.Day}</td><td>${item.Workout}</td><td>${item.Muscle}</td><td>${item["Sets/Time"]}</td><td>${item.Steps}</td><td>${item.Calories}</td></tr>`;
+                    });
+                    table += "</table>";
+                    
+                    output.innerHTML = summary + table;
+                }
+            } catch (error) {
+                output.innerHTML = `<p style="color:red;">Failed to generate plan. Please try again later.</p>`;
+                console.error("Error:", error);
             }
         });
     </script>
