@@ -1,39 +1,51 @@
-
 import streamlit as st
 import requests
+import pandas as pd
 
-st.set_page_config(page_title="AI Gym Genie", page_icon="🧞")
+st.set_page_config(page_title="AI Gym & Lifestyle Planner", layout="centered")
 
-st.title("🧞 Gym Genie")
-st.markdown("Get your personalized workout and nutrition plan based on your goal.")
+st.markdown(
+    "<h1 style='text-align: center; color: #00adb5;'>🏋️ AI Gym & Lifestyle Planner</h1>", 
+    unsafe_allow_html=True
+)
 
-# Input fields
-username = st.text_input("Enter your name")
-current_weight = st.number_input("Current Weight (kg)", min_value=20, max_value=200, step=1)
-target_weight = st.number_input("Target Weight (kg)", min_value=20, max_value=200, step=1)
-days = st.number_input("Number of Days to Achieve Goal", min_value=1, max_value=365, step=1)
+with st.form("user_form"):
+    username = st.text_input("👤 Enter your name")
+    current_weight = st.number_input("⚖️ Current Weight (kg)", min_value=30.0, max_value=200.0)
+    target_weight = st.number_input("🎯 Target Weight (kg)", min_value=30.0, max_value=200.0)
+    days = st.number_input("📅 Number of Days for Plan", min_value=1, max_value=30)
+    submitted = st.form_submit_button("Generate Plan")
 
-# Submit button
-if st.button("Generate Plan"):
-    if username and current_weight and target_weight and days:
-        with st.spinner("Generating your plan..."):
-            try:
-                response = requests.post(
-                    "https://gymplanner-api.onrender.com/generate-plan",
-                    json={
-                        "username": username,
-                        "current_weight": current_weight,
-                        "target_weight": target_weight,
-                        "days": days
-                    }
-                )
-                if response.status_code == 200:
-                    data = response.json()
-                    st.success("Plan generated successfully! 🎉")
-                    st.markdown(f"📄 [Download your plan here]({data['pdf_link']})")
-                else:
-                    st.error("Something went wrong. Please check your inputs or try again later.")
-            except Exception as e:
-                st.error(f"Request failed: {e}")
-    else:
-        st.warning("Please fill in all fields before generating the plan.")
+if submitted:
+    with st.spinner("Generating your plan..."):
+        payload = {
+            "username": username,
+            "current_weight": current_weight,
+            "target_weight": target_weight,
+            "days": days
+        }
+        try:
+            response = requests.post("https://gymplanner-api.onrender.com/generate-plan", json=payload)
+            data = response.json()
+
+            if "plan" in data:
+                st.success(f"Here’s your personalized plan, {data['username']} 💪")
+
+                df = pd.DataFrame(data["plan"])
+                df.set_index("Day", inplace=True)
+
+                def style_table(df):
+                    return df.style.set_table_styles([
+                        {'selector': 'th', 'props': [('background-color', '#00adb5'), ('color', 'white'), ('padding', '8px')]},
+                        {'selector': 'td', 'props': [('padding', '8px')]},
+                    ]).format({
+                        "Calories": "{:.0f} kcal",
+                        "Steps": "{:.0f} steps"
+                    })
+
+                st.write(style_table(df).to_html(), unsafe_allow_html=True)
+            else:
+                st.error(data.get("error", "Something went wrong."))
+
+        except Exception as e:
+            st.error("Server error or invalid response.")
