@@ -3,7 +3,6 @@ import requests
 import pandas as pd
 
 st.set_page_config(page_title="AI Gym & Lifestyle Planner", layout="centered")
-
 st.markdown(
     "<h1 style='text-align: center; color: #00adb5;'>🏋️ AI Gym & Lifestyle Planner</h1>", 
     unsafe_allow_html=True
